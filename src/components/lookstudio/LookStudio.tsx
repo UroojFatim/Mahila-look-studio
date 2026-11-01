@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- AI results are remote one-off URLs; next/image adds nothing here */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
@@ -113,11 +114,12 @@ export default function LookStudio() {
   const [necklacePick, setNecklacePick] = useState<string>("auto");
 
   const [stages, setStages] = useState<Record<StageKey, StageState>>(IDLE);
+  const [stageNote, setStageNote] = useState<Partial<Record<StageKey, string>>>({});
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [needsShade, setNeedsShade] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [zoom, setZoom] = useState<{ src: string; label: string } | null>(null);
+  const [zoom, setZoom] = useState<{ src: string; label: string; waistUp?: boolean } | null>(null);
 
   useEffect(() => {
     if (!zoom) return;
@@ -143,7 +145,7 @@ export default function LookStudio() {
 
   function resetResults() {
     setOutfitUrl(""); setBustId(""); setCloseUrl(""); setPlan(null); setEarring(null); setNecklace(null);
-    setError(""); setNeedsShade(false); setSaved(false); setStages(IDLE);
+    setError(""); setNeedsShade(false); setSaved(false); setStages(IDLE); setStageNote({});
   }
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -202,8 +204,9 @@ export default function LookStudio() {
         const r = await waitFor("earring", t.taskId);
         if (r.url) { url = r.url; setCloseUrl(url); }
         set("earring", "done");
-      } catch {
-        set("earring", "skipped");
+      } catch (err) {
+        set("earring", "error");
+        setStageNote((n) => ({ ...n, earring: err instanceof Error ? err.message : "Earrings failed" }));
       }
     } else {
       set("earring", "skipped");
@@ -218,8 +221,9 @@ export default function LookStudio() {
         const r = await waitFor("necklace", t.taskId);
         if (r.url) { url = r.url; setCloseUrl(url); }
         set("necklace", "done");
-      } catch {
-        set("necklace", "skipped");
+      } catch (err) {
+        set("necklace", "error");
+        setStageNote((n) => ({ ...n, necklace: err instanceof Error ? err.message : "Necklace failed" }));
       }
     } else {
       set("necklace", "skipped");
@@ -391,7 +395,7 @@ export default function LookStudio() {
               {!outfit.vto
                 ? "Long two-piece eastern cuts are shown as a product preview — makeup and jewelry are still matched to this outfit."
                 : outfit.garmentCategory === "upper_body"
-                  ? "Tops pair with your own bottoms. For a complete head-to-toe look, pick a dress or a Wedding piece."
+                  ? "Tops are shown waist up. For a head-to-toe look, pick a dress, jumpsuit or Wedding piece."
                   : "Full-length piece — tried on head to toe."}
             </p>
           </div>
@@ -419,9 +423,12 @@ export default function LookStudio() {
           {started && (
             <ol className="space-y-2 rounded-lg border border-border bg-card p-4 text-sm">
               {(Object.keys(STAGE_LABEL) as StageKey[]).map((k) => (
-                <li key={k} className="flex items-center gap-2">
-                  <StageIcon state={stages[k]} />
-                  <span className={stages[k] === "skipped" ? "text-muted-foreground line-through" : ""}>{STAGE_LABEL[k]}</span>
+                <li key={k}>
+                  <div className="flex items-center gap-2">
+                    <StageIcon state={stages[k]} />
+                    <span className={stages[k] === "skipped" ? "text-muted-foreground line-through" : ""}>{STAGE_LABEL[k]}</span>
+                  </div>
+                  {stageNote[k] && <p className="ml-6 text-xs text-destructive">{stageNote[k]}</p>}
                 </li>
               ))}
             </ol>
@@ -449,7 +456,8 @@ export default function LookStudio() {
         <div className="space-y-6">
           <div className="grid grid-cols-3 gap-3">
             <Frame label="Before" src={preview} onOpen={setZoom} />
-            <Frame label="The outfit" src={outfitUrl || (!outfit.vto && started ? outfit.image : "")} loading={running && !outfitUrl} onOpen={setZoom} />
+            <Frame label={outfit.garmentCategory === "upper_body" ? "The outfit · waist up" : "The outfit"} src={outfitUrl || (!outfit.vto && started ? outfit.image : "")}
+              loading={running && !outfitUrl} onOpen={setZoom} waistUp={Boolean(outfitUrl) && outfit.garmentCategory === "upper_body"} />
             <Frame label="Makeup & jewelry" src={closeUrl} loading={running && !closeUrl} onOpen={setZoom} />
           </div>
 
@@ -513,7 +521,13 @@ export default function LookStudio() {
             className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-black"><X className="h-5 w-5" /></button>
           <figure onClick={(e) => e.stopPropagation()} className="max-h-full max-w-3xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={zoom.src} alt={zoom.label} className="max-h-[85vh] w-auto rounded-lg object-contain" />
+            {zoom.waistUp ? (
+              <div className="aspect-[3/4] h-[85vh] max-w-full overflow-hidden rounded-lg">
+                <img src={zoom.src} alt={zoom.label} className="h-full w-full origin-top scale-[1.7] object-cover object-top" />
+              </div>
+            ) : (
+              <img src={zoom.src} alt={zoom.label} className="max-h-[85vh] w-auto rounded-lg object-contain" />
+            )}
             <figcaption className="mt-2 text-center text-sm text-white/80">{zoom.label}</figcaption>
           </figure>
         </div>
@@ -576,16 +590,18 @@ function JewelRow({ label, enabled, onToggle, items, pick, onPick }: {
   );
 }
 
-function Frame({ label, src, loading, onOpen }: {
-  label: string; src: string; loading?: boolean; onOpen?: (z: { src: string; label: string }) => void;
+// Tops keep the shopper's own bottoms, so their result is framed waist up.
+function Frame({ label, src, loading, onOpen, waistUp }: {
+  label: string; src: string; loading?: boolean; waistUp?: boolean;
+  onOpen?: (z: { src: string; label: string; waistUp?: boolean }) => void;
 }) {
   return (
     <figure className="overflow-hidden rounded-lg border border-border bg-secondary">
       <div className="relative aspect-[3/4] w-full">
         {src ? (
-          <button type="button" onClick={() => onOpen?.({ src, label })} className="h-full w-full cursor-zoom-in" aria-label={`Enlarge ${label}`}>
+          <button type="button" onClick={() => onOpen?.({ src, label, waistUp })} className="h-full w-full cursor-zoom-in overflow-hidden" aria-label={`Enlarge ${label}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={label} className="h-full w-full object-cover object-top" />
+            <img src={src} alt={label} className={`h-full w-full object-cover object-top ${waistUp ? "origin-top scale-[1.7]" : ""}`} />
           </button>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">

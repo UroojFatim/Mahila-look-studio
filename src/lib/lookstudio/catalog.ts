@@ -45,7 +45,7 @@ export const OUTFITS: Outfit[] = [
   { id: "mint-pishwas", name: "Mint Embellished Pishwas", price: 19990, hex: "#95AC91", image: "/look-studio/outfits/mint-pishwas.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
   { id: "champagne-gown", name: "Champagne Sequin Gown", price: 24990, hex: "#D1A073", image: "/look-studio/outfits/champagne-gown.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
   { id: "wine-velvet-maxi", name: "Wine Velvet Maxi", price: 14990, hex: "#6B0F1F", image: "/look-studio/outfits/wine-velvet-maxi.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
-  { id: "royal-blue-maxi", name: "Royal Blue Silk Maxi", price: 16990, hex: "#1F3C8F", image: "/look-studio/outfits/royal-blue-maxi.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
+  { id: "royal-blue-maxi", name: "Royal Blue Embroidered Gown", price: 16990, hex: "#1F2E9A", image: "/look-studio/outfits/royal-blue-maxi.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
   { id: "blush-lehnga-gown", name: "Blush Pink Embellished Gown", price: 21990, hex: "#D98389", image: "/look-studio/outfits/blush-flared-gown.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
 
   // Western

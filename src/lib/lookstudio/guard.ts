@@ -21,13 +21,23 @@ export function clientIp(headers: Headers): string {
 }
 
 // Result URLs we chain into the next task must be YouCam's own storage.
-const ALLOWED_RESULT_HOSTS = [/\.amazonaws\.com$/i, /\.makeupar\.com$/i, /\.perfectcorp\.com$/i];
+const ALLOWED_RESULT_HOSTS = [/\.amazonaws\.com$/i, /\.cloudfront\.net$/i, /(^|\.)makeupar\.com$/i, /(^|\.)perfectcorp\.com$/i];
 
 export function isAllowedResultUrl(raw: unknown): raw is string {
   if (typeof raw !== "string" || raw.length > 4000) return false;
   try {
     const u = new URL(raw);
     return u.protocol === "https:" && ALLOWED_RESULT_HOSTS.some((re) => re.test(u.hostname));
+  } catch {
+    return false;
+  }
+}
+
+/** Any https URL — for images we only pass on to YouCam and never fetch ourselves. */
+export function isHttpsUrl(raw: unknown): raw is string {
+  if (typeof raw !== "string" || raw.length > 4000) return false;
+  try {
+    return new URL(raw).protocol === "https:";
   } catch {
     return false;
   }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { createTask, getTask, uploadImage, YouCamError, type FeatureKey } from "@/lib/lookstudio/youcam";
-import { clientIp, isAllowedResultUrl, rateLimit } from "@/lib/lookstudio/guard";
+import { clientIp, isAllowedResultUrl, isHttpsUrl, rateLimit } from "@/lib/lookstudio/guard";
 import { getEarring, getNecklace, getOutfit } from "@/lib/lookstudio/catalog";
 import { headCrop } from "@/lib/lookstudio/crop";
 import { normalizeHex, planLook, toYouCamEffects, type Occasion } from "@/lib/lookstudio/harmony";
@@ -31,11 +31,23 @@ async function catalogFileId(publicPath: string): Promise<string> {
   return id;
 }
 
+// 2D jewelry VTO uses its own body shape: source_info + object_infos.
+function jewelryBody(src: Record<string, string>, refId: string, parameter: Record<string, unknown>) {
+  const sourceName = src.src_file_id ?? src.src_file_url;
+  return {
+    ...src,
+    ref_file_ids: [refId],
+    source_info: { name: sourceName },
+    object_infos: [{ name: refId, parameter }],
+  };
+}
+
 function sourceFields(body: any): Record<string, string> {
   if (typeof body.srcFileId === "string" && body.srcFileId.length > 0 && body.srcFileId.length < 400) {
     return { src_file_id: body.srcFileId };
   }
-  if (isAllowedResultUrl(body.srcUrl)) return { src_file_url: body.srcUrl };
+  // YouCam downloads this itself (we don't), so any https result URL is fine.
+  if (isHttpsUrl(body.srcUrl)) return { src_file_url: body.srcUrl };
   throw new YouCamError("Missing or invalid source image", "BadRequest", 400);
 }
 
@@ -97,7 +109,14 @@ export async function POST(req: NextRequest) {
       const necklace = getNecklace(String(body.necklaceId));
       if (!necklace) return NextResponse.json({ message: "Unknown necklace" }, { status: 400 });
       const refId = await catalogFileId(necklace.image);
-      const taskId = await createTask("necklace", { ...sourceFields(body), ref_file_ids: [refId] });
+      const taskId = await createTask(
+        "necklace",
+        jewelryBody(sourceFields(body), refId, {
+          necklace_need_remove_background: true,
+          necklace_shadow_intensity: 0.3,
+          necklace_ambient_light_intensity: 0.8,
+        }),
+      );
       return NextResponse.json({ taskId });
     }
 
@@ -105,7 +124,15 @@ export async function POST(req: NextRequest) {
     const earring = getEarring(String(body.earringId));
     if (!earring) return NextResponse.json({ message: "Unknown earring" }, { status: 400 });
     const refId = await catalogFileId(earring.image);
-    const taskId = await createTask("earring", { ...sourceFields(body), ref_file_ids: [refId] });
+    const taskId = await createTask(
+      "earring",
+      jewelryBody(sourceFields(body), refId, {
+        earring_need_remove_background: true,
+        earring_occluded_type: 0,
+        earring_shadow_intensity: 0.3,
+        earring_ambient_light_intensity: 0.8,
+      }),
+    );
     return NextResponse.json({ taskId });
   } catch (err) {
     const status = err instanceof YouCamError && err.status ? err.status : 500;
