@@ -281,8 +281,9 @@ export default function LookStudio() {
           setToneCache((c) => ({ ...c, [sourceKey]: hex }));
           set("tone", "done");
           return hex;
-        } catch {
+        } catch (err) {
           set("tone", "error");
+          setStageNote((n) => ({ ...n, tone: (err instanceof Error ? err.message : "Skin tone failed") + " — pick your shade below." }));
           return "";
         }
       })();

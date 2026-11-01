@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     if (!STEPS.includes(step)) return NextResponse.json({ message: "Unknown step" }, { status: 400 });
 
     if (step === "tone") {
-      const taskId = await createTask("tone", { ...sourceFields(body) });
+      const taskId = await createTask("tone", { ...sourceFields(body), face_angle_strictness_level: "low" });
       return NextResponse.json({ taskId });
     }
 

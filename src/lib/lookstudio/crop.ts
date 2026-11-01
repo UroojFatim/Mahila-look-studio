@@ -21,9 +21,10 @@ export async function headCrop(input: Buffer, kind: CropKind): Promise<Buffer> {
   let top: number;
 
   if (fullLength) {
-    cw = Math.round(W * (kind === "face" ? 0.18 : 0.36));
-    ch = Math.round(cw * (kind === "face" ? 1.35 : 1.25));
-    top = Math.round(H * 0.025);
+    // face: tight so the face is ~80% of the width (YouCam needs > 60%)
+    cw = Math.round(W * (kind === "face" ? 0.13 : 0.36));
+    ch = Math.round(cw * (kind === "face" ? 1.3 : 1.25));
+    top = Math.round(H * (kind === "face" ? 0.045 : 0.025));
   } else {
     cw = Math.round(W * (kind === "face" ? 0.7 : 1));
     ch = Math.min(H, Math.round(cw * (kind === "face" ? 1.25 : 1.3)));
