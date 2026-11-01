@@ -5,7 +5,7 @@ Missing images show a colour swatch in the catalogue; trying them on returns "Pr
 
 ## outfits/ (JPG, front-facing single garment, plain background, 3:4)
 Wedding (one-piece, full length):
-- maroon-velvet-gown.jpg
+- maroon-velvet-gown.jpg, wine-velvet-maxi.jpg
 - gold-anarkali.jpg
 - mint-pishwas.jpg
 - champagne-gown.jpg
@@ -21,7 +21,7 @@ Western / fusion / eastern (already added):
 - silver-hoops.png
 
 ## necklaces/ (PNG, front-facing, shown as worn/on a bust, background removed or plain white)
-- gold-kundan.png
+- gold-kundan.png, emerald-kundan-pendant.png (added)
 - silver-crystal.png
 
 If an outfit's colour changes, update its `hex` in catalog.ts — the Color Harmony Engine uses it.

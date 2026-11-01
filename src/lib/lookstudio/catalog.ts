@@ -40,12 +40,13 @@ export const COLLECTIONS: { key: Collection; label: string }[] = [
 
 export const OUTFITS: Outfit[] = [
   // Wedding — one-piece, full length
-  { id: "maroon-velvet-gown", name: "Maroon Velvet Maxi Gown", price: 18990, hex: "#5C0F1E", image: "/look-studio/outfits/maroon-velvet-gown.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
-  { id: "gold-anarkali", name: "Gold Embroidered Anarkali", price: 22490, hex: "#C39A4A", image: "/look-studio/outfits/gold-anarkali.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
-  { id: "mint-pishwas", name: "Mint Embellished Pishwas", price: 19990, hex: "#A8D5C2", image: "/look-studio/outfits/mint-pishwas.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
-  { id: "champagne-gown", name: "Champagne Sequin Gown", price: 24990, hex: "#E3CBA8", image: "/look-studio/outfits/champagne-gown.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
+  { id: "maroon-velvet-gown", name: "Maroon Velvet Embroidered Gown", price: 18990, hex: "#6A1020", image: "/look-studio/outfits/maroon-velvet-gown.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
+  { id: "gold-anarkali", name: "Antique Gold Anarkali Gown", price: 22490, hex: "#B0702E", image: "/look-studio/outfits/gold-anarkali.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
+  { id: "mint-pishwas", name: "Mint Embellished Pishwas", price: 19990, hex: "#95AC91", image: "/look-studio/outfits/mint-pishwas.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
+  { id: "champagne-gown", name: "Champagne Sequin Gown", price: 24990, hex: "#D1A073", image: "/look-studio/outfits/champagne-gown.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
+  { id: "wine-velvet-maxi", name: "Wine Velvet Maxi", price: 14990, hex: "#6B0F1F", image: "/look-studio/outfits/wine-velvet-maxi.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
   { id: "royal-blue-maxi", name: "Royal Blue Silk Maxi", price: 16990, hex: "#1F3C8F", image: "/look-studio/outfits/royal-blue-maxi.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
-  { id: "blush-lehnga-gown", name: "Blush Pink Flared Gown", price: 21990, hex: "#E8A9B4", image: "/look-studio/outfits/blush-flared-gown.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
+  { id: "blush-lehnga-gown", name: "Blush Pink Embellished Gown", price: 21990, hex: "#D98389", image: "/look-studio/outfits/blush-flared-gown.jpg", collection: "wedding", vto: true, garmentCategory: "full_body" },
 
   // Western
   { id: "maroon-wrap-top", name: "Maroon Wrap Top", price: 3490, hex: "#5A1020", image: "/look-studio/outfits/maroon-wrap-top.jpg", collection: "western", vto: true, garmentCategory: "upper_body" },
@@ -71,6 +72,7 @@ export const EARRINGS: Jewel[] = [
 
 export const NECKLACES: Jewel[] = [
   { id: "gold-kundan-necklace", name: "Gold Kundan Necklace", price: 4990, image: "/look-studio/necklaces/gold-kundan.png", metal: "gold", statement: true },
+  { id: "emerald-kundan-pendant", name: "Emerald Kundan Pendant Set", price: 6490, image: "/look-studio/necklaces/emerald-kundan-pendant.png", metal: "gold", statement: true },
   { id: "silver-crystal-necklace", name: "Silver Crystal Necklace", price: 3990, image: "/look-studio/necklaces/silver-crystal.png", metal: "silver", statement: true },
 ];
 

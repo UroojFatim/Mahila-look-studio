@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Camera, Check, Loader2, Sparkles, ShoppingBag, Upload, AlertCircle, RotateCcw, Download } from "lucide-react";
+import { Camera, Check, Loader2, Sparkles, ShoppingBag, Upload, AlertCircle, RotateCcw, Download, X, ArrowRight } from "lucide-react";
 import {
   COLLECTIONS,
   EARRINGS,
@@ -29,6 +29,15 @@ const STAGE_LABEL: Record<StageKey, string> = {
   necklace: "Adding necklace · YouCam Necklace VTO",
 };
 const IDLE: Record<StageKey, StageState> = { upload: "idle", outfit: "idle", tone: "idle", makeup: "idle", earring: "idle", necklace: "idle" };
+
+const PIPELINE: { name: string; ours?: boolean }[] = [
+  { name: "AI Clothes VTO" },
+  { name: "Facial Color Tones" },
+  { name: "Color Harmony Engine", ours: true },
+  { name: "Makeup VTO" },
+  { name: "Earrings VTO" },
+  { name: "Necklace VTO" },
+];
 
 const PRESETS = ["model1.jpg", "model2.jpg", "model3.jpg", "model4.jpg"];
 // Fallback if the tone API can't read the photo.
@@ -108,6 +117,14 @@ export default function LookStudio() {
   const [error, setError] = useState("");
   const [needsShade, setNeedsShade] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [zoom, setZoom] = useState<{ src: string; label: string } | null>(null);
+
+  useEffect(() => {
+    if (!zoom) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setZoom(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoom]);
 
   // results — kept so changing occasion or jewelry only re-runs what changed
   const [toneCache, setToneCache] = useState<Record<string, string>>({});
@@ -318,6 +335,17 @@ export default function LookStudio() {
         <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
           Try the outfit, the makeup that suits your skin and that outfit, and the jewelry — together, before you buy.
         </p>
+        <ol className="mx-auto mt-6 flex max-w-4xl flex-wrap items-center justify-center gap-1.5 text-xs" aria-label="How a look is built">
+          {PIPELINE.map((p, i) => (
+            <li key={p.name} className="flex items-center gap-1.5">
+              <span className={`rounded-full border px-3 py-1 ${p.ours ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"}`}>
+                {p.name}
+              </span>
+              {i < PIPELINE.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground" aria-hidden />}
+            </li>
+          ))}
+        </ol>
+        <p className="mt-2 text-[11px] text-muted-foreground">Five YouCam APIs chained, with our own colour-matching step in the middle.</p>
       </header>
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
@@ -420,9 +448,9 @@ export default function LookStudio() {
         {/* ---------- results ---------- */}
         <div className="space-y-6">
           <div className="grid grid-cols-3 gap-3">
-            <Frame label="Before" src={preview} />
-            <Frame label="The outfit" src={outfitUrl || (!outfit.vto && started ? outfit.image : "")} loading={running && !outfitUrl} />
-            <Frame label="Makeup & jewelry" src={closeUrl} loading={running && !closeUrl} />
+            <Frame label="Before" src={preview} onOpen={setZoom} />
+            <Frame label="The outfit" src={outfitUrl || (!outfit.vto && started ? outfit.image : "")} loading={running && !outfitUrl} onOpen={setZoom} />
+            <Frame label="Makeup & jewelry" src={closeUrl} loading={running && !closeUrl} onOpen={setZoom} />
           </div>
 
           {plan && (
@@ -477,6 +505,19 @@ export default function LookStudio() {
           )}
         </div>
       </div>
+
+      {zoom && (
+        <div role="dialog" aria-modal="true" aria-label={zoom.label} onClick={() => setZoom(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <button type="button" onClick={() => setZoom(null)} aria-label="Close"
+            className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-black"><X className="h-5 w-5" /></button>
+          <figure onClick={(e) => e.stopPropagation()} className="max-h-full max-w-3xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={zoom.src} alt={zoom.label} className="max-h-[85vh] w-auto rounded-lg object-contain" />
+            <figcaption className="mt-2 text-center text-sm text-white/80">{zoom.label}</figcaption>
+          </figure>
+        </div>
+      )}
     </section>
   );
 }
@@ -514,10 +555,20 @@ function JewelRow({ label, enabled, onToggle, items, pick, onPick }: {
             Auto-match
           </button>
           {items.map((j) => (
-            <button key={j.id} type="button" onClick={() => onPick(j.id)} title={`${j.name} · ${fmt(j.price)}`}
-              className={`relative h-9 w-9 overflow-hidden rounded-full border-2 bg-white ${pick === j.id ? "border-primary" : "border-border"}`}>
-              <Image src={j.image} alt={j.name} fill sizes="36px" className="object-contain p-0.5" />
-            </button>
+            <div key={j.id} className="group relative">
+              <button type="button" onClick={() => onPick(j.id)} aria-label={`${j.name}, ${fmt(j.price)}`}
+                className={`relative h-11 w-11 overflow-hidden rounded-full border-2 bg-white transition-transform group-hover:scale-110 ${pick === j.id ? "border-primary" : "border-border"}`}>
+                <Image src={j.image} alt="" fill sizes="44px" className="object-contain p-0.5" />
+              </button>
+              {/* hover / keyboard-focus preview */}
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 hidden w-52 -translate-x-1/2 rounded-lg border border-border bg-white p-2 shadow-xl group-hover:block group-focus-within:block">
+                <div className="relative h-48 w-full">
+                  <Image src={j.image} alt={j.name} fill sizes="208px" className="object-contain" />
+                </div>
+                <p className="mt-1 text-center text-xs font-medium text-foreground">{j.name}</p>
+                <p className="text-center text-[11px] text-muted-foreground">{fmt(j.price)} · {j.metal}</p>
+              </div>
+            </div>
           ))}
         </>
       )}
@@ -525,13 +576,17 @@ function JewelRow({ label, enabled, onToggle, items, pick, onPick }: {
   );
 }
 
-function Frame({ label, src, loading }: { label: string; src: string; loading?: boolean }) {
+function Frame({ label, src, loading, onOpen }: {
+  label: string; src: string; loading?: boolean; onOpen?: (z: { src: string; label: string }) => void;
+}) {
   return (
     <figure className="overflow-hidden rounded-lg border border-border bg-secondary">
       <div className="relative aspect-[3/4] w-full">
         {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt={label} className="h-full w-full object-cover object-top" />
+          <button type="button" onClick={() => onOpen?.({ src, label })} className="h-full w-full cursor-zoom-in" aria-label={`Enlarge ${label}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src} alt={label} className="h-full w-full object-cover object-top" />
+          </button>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "—"}
