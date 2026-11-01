@@ -18,6 +18,5 @@ Front-facing product shot of ONE garment, plain background, 1024px+ on the long 
 A single earring, clear front view, plain or transparent background.
 - gold-jhumka.png
 - silver-drops.png
-- oxidised-chandbali.png
 
 If an outfit's colour changes, update its `hex` in catalog.ts — the Color Harmony Engine uses it.

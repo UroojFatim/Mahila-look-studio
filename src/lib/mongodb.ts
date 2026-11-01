@@ -1,44 +1,52 @@
 import { MongoClient, Db } from "mongodb";
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
-}
-
-const uri = process.env.MONGODB_URI;
 const options = {
   maxPoolSize: 10,
+  serverSelectionTimeoutMS: 8000,
 };
 
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
+type MongoGlobal = typeof globalThis & { _mongoClientPromise?: Promise<MongoClient> };
+const g = global as MongoGlobal;
 
-if (process.env.NODE_ENV === "development") {
-  // In development mode, use a global variable to preserve the client across hot reloads
-  let globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>;
-  };
-
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
+function connect(): Promise<MongoClient> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    return Promise.reject(new Error('Missing environment variable "MONGODB_URI"'));
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
-} else {
-  // In production mode, create a new client
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  const p = new MongoClient(uri, options).connect();
+  // Don't cache a failed connection — the next request retries.
+  p.catch(() => {
+    if (g._mongoClientPromise === p) g._mongoClientPromise = undefined;
+  });
+  return p;
 }
+
+function getClientPromise(): Promise<MongoClient> {
+  if (!g._mongoClientPromise) g._mongoClientPromise = connect();
+  return g._mongoClientPromise;
+}
+
+// Lazy: importing this module never throws or opens a connection by itself.
+const clientPromise: Promise<MongoClient> = {
+  then: (res: any, rej: any) => getClientPromise().then(res, rej),
+  catch: (rej: any) => getClientPromise().catch(rej),
+  finally: (f: any) => getClientPromise().finally(f),
+  [Symbol.toStringTag]: "Promise",
+} as Promise<MongoClient>;
 
 export default clientPromise;
 
-// Helper function to get database
 export async function getDatabase(): Promise<Db> {
   try {
-    const client = await clientPromise;
+    const client = await getClientPromise();
     return client.db("tMust");
   } catch (error) {
-    console.error("MongoDB connection error:", error);
-    throw new Error("Failed to connect to MongoDB");
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("MongoDB connection error:", msg);
+    let hint = "";
+    if (/querySrv|ENOTFOUND|ECONNREFUSED/i.test(msg)) hint = " (DNS problem: try a different network or set DNS to 8.8.8.8)";
+    else if (/auth|bad auth|authentication/i.test(msg)) hint = " (wrong username or password in MONGODB_URI)";
+    else if (/Server selection timed out|whitelist|IP/i.test(msg)) hint = " (add your IP / 0.0.0.0/0 in Atlas → Network Access)";
+    throw new Error(`Failed to connect to MongoDB${hint}: ${msg}`);
   }
 }
-
