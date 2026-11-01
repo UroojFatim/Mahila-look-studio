@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Camera, Check, Loader2, Sparkles, ShoppingBag, Upload, AlertCircle, RotateCcw, Download, X, ArrowRight } from "lucide-react";
+import { Camera, Check, Loader2, Sparkles, ShoppingBag, Upload, AlertCircle, RotateCcw, Download, X, ArrowRight, Sun, Moon, Gem } from "lucide-react";
 import {
   COLLECTIONS,
   EARRINGS,
@@ -40,13 +40,20 @@ const PIPELINE: { name: string; ours?: boolean }[] = [
   { name: "Necklace VTO" },
 ];
 
-const PRESETS = ["model1.jpg", "model2.jpg", "model3.jpg", "model4.jpg"];
+// Preset models. `ears: false` = ears covered by hair, so earrings are switched off.
+const PRESETS: { file: string; ears: boolean }[] = [
+  { file: "model5.jpg", ears: true },
+  { file: "model6.jpg", ears: true },
+  { file: "model7.jpg", ears: true },
+  { file: "model8.jpg", ears: false },
+];
 // Fallback if the tone API can't read the photo.
 const SKIN_SWATCHES = ["#F1D3BC", "#E3B795", "#C99A75", "#A87652", "#8A5A3B", "#5E3B26"];
-const OCCASIONS: { key: Occasion; label: string }[] = [
-  { key: "day", label: "Day" },
-  { key: "evening", label: "Evening" },
-  { key: "wedding", label: "Wedding" },
+// Occasion drives makeup intensity and jewelry size (see harmony.ts INTENSITY).
+const OCCASIONS: { key: Occasion; label: string; icon: typeof Sun; makeup: string; jewelry: string; level: number }[] = [
+  { key: "day", label: "Day", icon: Sun, makeup: "Sheer, fresh makeup", jewelry: "Small studs", level: 1 },
+  { key: "evening", label: "Evening", icon: Moon, makeup: "Defined eyes & lips", jewelry: "Statement earrings", level: 2 },
+  { key: "wedding", label: "Wedding", icon: Gem, makeup: "Full glam, photo-ready", jewelry: "Bridal set + necklace", level: 3 },
 ];
 
 const fmt = (n: number) => `Rs. ${n.toLocaleString("en-PK")}`;
@@ -160,6 +167,8 @@ export default function LookStudio() {
   }
 
   function onPreset(p: string) {
+    const meta = PRESETS.find((x) => x.file === p);
+    setWithEarrings(meta ? meta.ears : true);
     setPreset(p);
     setPhoto(null);
     setPreview(`/tryon-models/${p}`);
@@ -206,14 +215,20 @@ export default function LookStudio() {
         set("earring", "done");
       } catch (err) {
         set("earring", "error");
-        setStageNote((n) => ({ ...n, earring: err instanceof Error ? err.message : "Earrings failed" }));
+        const msg = err instanceof Error ? err.message : "Earrings failed";
+        setStageNote((n) => ({
+          ...n,
+          earring: /earlobe|ear/i.test(msg)
+            ? "Ears aren't clearly visible — try a photo with hair tucked behind the ears and no earrings on."
+            : msg,
+        }));
       }
     } else {
       set("earring", "skipped");
     }
 
     if (withNecklace) {
-      const n = necklacePick === "auto" ? recommendNecklace(p.skin.undertone) : NECKLACES.find((x) => x.id === necklacePick)!;
+      const n = necklacePick === "auto" ? recommendNecklace(p.skin.undertone, formal) : NECKLACES.find((x) => x.id === necklacePick)!;
       setNecklace(n);
       set("necklace", "running");
       try {
@@ -223,7 +238,11 @@ export default function LookStudio() {
         set("necklace", "done");
       } catch (err) {
         set("necklace", "error");
-        setStageNote((n) => ({ ...n, necklace: err instanceof Error ? err.message : "Necklace failed" }));
+        const msg = err instanceof Error ? err.message : "Necklace failed";
+        setStageNote((n) => ({
+          ...n,
+          necklace: /neck/i.test(msg) ? "Neck isn't clearly visible — try a photo with the neckline uncovered." : msg,
+        }));
       }
     } else {
       set("necklace", "skipped");
@@ -363,10 +382,10 @@ export default function LookStudio() {
               </button>
               <input ref={fileInput} type="file" accept="image/jpeg,image/png" className="hidden" onChange={onPick} />
               <span className="text-sm text-muted-foreground">or pick a model</span>
-              {PRESETS.map((p) => (
-                <button key={p} type="button" onClick={() => onPreset(p)} aria-label={`Use ${p}`}
-                  className={`relative h-14 w-11 overflow-hidden rounded-md border-2 ${preset === p ? "border-primary" : "border-transparent"}`}>
-                  <Image src={`/tryon-models/${p}`} alt="" fill sizes="44px" className="object-cover" />
+              {PRESETS.map(({ file }, i) => (
+                <button key={file} type="button" onClick={() => onPreset(file)} aria-label={`Use model ${i + 1}`}
+                  className={`relative h-16 w-12 overflow-hidden rounded-md border-2 ${preset === file ? "border-primary" : "border-transparent"}`}>
+                  <Image src={`/tryon-models/${file}`} alt="" fill sizes="48px" className="object-cover object-top" />
                 </button>
               ))}
             </div>
@@ -401,15 +420,36 @@ export default function LookStudio() {
           </div>
 
           <div>
-            <h2 className="mb-3 font-serif text-xl">3. Occasion &amp; jewelry</h2>
-            <div className="flex flex-wrap gap-2">
-              {OCCASIONS.map((o) => (
-                <button key={o.key} type="button" disabled={running} onClick={() => changeOccasion(o.key)}
-                  className={`rounded-full border px-4 py-1.5 text-sm ${occasion === o.key ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"}`}>
-                  {o.label}
-                </button>
-              ))}
+            <h2 className="mb-1 font-serif text-xl">3. Where are you going?</h2>
+            <p className="mb-3 text-xs text-muted-foreground">The occasion sets how bold the makeup is and how big the jewelry gets.</p>
+            <div className="grid grid-cols-3 gap-3">
+              {OCCASIONS.map((o) => {
+                const Icon = o.icon;
+                const active = occasion === o.key;
+                return (
+                  <button key={o.key} type="button" disabled={running} onClick={() => changeOccasion(o.key)} aria-pressed={active}
+                    className={`rounded-xl border-2 p-3 text-left transition disabled:opacity-60 ${active ? "border-primary bg-primary text-primary-foreground shadow-md" : "border-border bg-card hover:border-primary/50"}`}>
+                    <Icon className="mb-2 h-5 w-5" aria-hidden />
+                    <p className="font-serif text-base leading-tight">{o.label}</p>
+                    <p className={`mt-1 text-[11px] leading-snug ${active ? "text-primary-foreground/85" : "text-muted-foreground"}`}>{o.makeup}</p>
+                    <p className={`text-[11px] leading-snug ${active ? "text-primary-foreground/85" : "text-muted-foreground"}`}>{o.jewelry}</p>
+                    <div className="mt-2 flex gap-1" aria-label={`Makeup intensity ${o.level} of 3`}>
+                      {[1, 2, 3].map((n) => (
+                        <span key={n} className={`h-1.5 flex-1 rounded-full ${n <= o.level ? (active ? "bg-primary-foreground" : "bg-primary") : active ? "bg-primary-foreground/30" : "bg-border"}`} />
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
+            {skinHex && bustId && (
+              <p className="mt-2 text-[11px] text-muted-foreground">Look ready — switching occasion only re-does the makeup and jewelry.</p>
+            )}
+          </div>
+
+          <div>
+            <h2 className="mb-1 font-serif text-xl">4. Jewelry</h2>
+            <p className="text-xs text-muted-foreground">Auto-match picks gold or silver for your undertone. Hover to see a piece up close.</p>
             <JewelRow label="Earrings" enabled={withEarrings} onToggle={setWithEarrings} items={EARRINGS} pick={earringPick} onPick={setEarringPick} />
             <JewelRow label="Necklace" enabled={withNecklace} onToggle={setWithNecklace} items={NECKLACES} pick={necklacePick} onPick={setNecklacePick} />
           </div>
@@ -458,7 +498,7 @@ export default function LookStudio() {
             <Frame label="Before" src={preview} onOpen={setZoom} />
             <Frame label={outfit.garmentCategory === "upper_body" ? "The outfit · waist up" : "The outfit"} src={outfitUrl || (!outfit.vto && started ? outfit.image : "")}
               loading={running && !outfitUrl} onOpen={setZoom} waistUp={Boolean(outfitUrl) && outfit.garmentCategory === "upper_body"} />
-            <Frame label="Makeup & jewelry" src={closeUrl} loading={running && !closeUrl} onOpen={setZoom} />
+            <Frame label={`Makeup & jewelry · ${OCCASIONS.find((o) => o.key === (plan?.occasion ?? occasion))!.label} look`} src={closeUrl} loading={running && !closeUrl} onOpen={setZoom} />
           </div>
 
           {plan && (

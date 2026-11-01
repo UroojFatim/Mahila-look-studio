@@ -14,7 +14,7 @@ const PRESET_DIR = path.join(process.cwd(), "public", "tryon-models");
 // Accepts either an uploaded selfie (`photo`) or a preset model (`presetId`)
 // and returns a YouCam file_id that later tasks use as their source image.
 export async function POST(req: NextRequest) {
-  if (!rateLimit(`upload:${clientIp(req.headers)}`, 20, 60 * 60 * 1000)) {
+  if (!rateLimit(`upload:${clientIp(req.headers)}`, 80, 60 * 60 * 1000)) {
     return NextResponse.json({ message: "Too many uploads — please try again later." }, { status: 429 });
   }
   try {

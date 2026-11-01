@@ -53,7 +53,7 @@ function sourceFields(body: any): Record<string, string> {
 
 // POST: start one step of the look. Returns { taskId } (+ the makeup plan for the makeup step).
 export async function POST(req: NextRequest) {
-  if (!rateLimit(`task:${clientIp(req.headers)}`, 40, 60 * 60 * 1000)) {
+  if (!rateLimit(`task:${clientIp(req.headers)}`, 150, 60 * 60 * 1000)) {
     return NextResponse.json({ message: "Demo limit reached — please try again in a while." }, { status: 429 });
   }
   try {
