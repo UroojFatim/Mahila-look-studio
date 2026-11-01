@@ -11,6 +11,7 @@ export const FEATURES = {
   makeup: "makeup-vto",
   tone: "skin-tone-analysis",
   earring: "2d-vto/earring",
+  necklace: "2d-vto/necklace",
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;

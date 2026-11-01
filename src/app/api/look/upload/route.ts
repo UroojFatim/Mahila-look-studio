@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { uploadImage, YouCamError } from "@/lib/lookstudio/youcam";
 import { clientIp, rateLimit } from "@/lib/lookstudio/guard";
+import { headCrop, type CropKind } from "@/lib/lookstudio/crop";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,6 +21,8 @@ export async function POST(req: NextRequest) {
     const form = await req.formData();
     const photo = form.get("photo");
     const presetId = String(form.get("presetId") || "");
+    const cropRaw = String(form.get("crop") || "");
+    const crop: CropKind | null = cropRaw === "face" || cropRaw === "bust" ? cropRaw : null;
 
     let buf: Buffer;
     let type: string;
@@ -47,6 +50,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Upload a photo or choose a model." }, { status: 400 });
     }
 
+    if (crop) {
+      buf = await headCrop(buf, crop);
+      type = "image/jpeg";
+      name = `${crop}.jpg`;
+    }
     const fileId = await uploadImage(buf, type, name);
     return NextResponse.json({ fileId });
   } catch (err) {

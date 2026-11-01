@@ -3,14 +3,15 @@ import { promises as fs } from "fs";
 import path from "path";
 import { createTask, getTask, uploadImage, YouCamError, type FeatureKey } from "@/lib/lookstudio/youcam";
 import { clientIp, isAllowedResultUrl, rateLimit } from "@/lib/lookstudio/guard";
-import { getEarring, getOutfit } from "@/lib/lookstudio/catalog";
+import { getEarring, getNecklace, getOutfit } from "@/lib/lookstudio/catalog";
+import { headCrop } from "@/lib/lookstudio/crop";
 import { normalizeHex, planLook, toYouCamEffects, type Occasion } from "@/lib/lookstudio/harmony";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const PUBLIC_DIR = path.join(process.cwd(), "public");
-const STEPS: FeatureKey[] = ["clothes", "makeup", "tone", "earring"];
+const STEPS: FeatureKey[] = ["clothes", "makeup", "tone", "earring", "necklace"];
 const OCCASIONS: Occasion[] = ["day", "evening", "wedding"];
 
 // Catalogue images are uploaded once per server instance and reused for ~20 min.
@@ -21,7 +22,9 @@ async function catalogFileId(publicPath: string): Promise<string> {
   const rel = path.normalize(publicPath).replace(/^([/\\])+/, "");
   const full = path.join(PUBLIC_DIR, rel);
   if (!full.startsWith(PUBLIC_DIR)) throw new Error("Invalid catalogue path");
-  const buf = await fs.readFile(full);
+  const buf = await fs.readFile(full).catch(() => {
+    throw new YouCamError(`Product image not added yet: ${publicPath}`, "MissingImage", 400);
+  });
   const type = full.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
   const id = await uploadImage(buf, type, path.basename(full));
   refCache.set(publicPath, { id, at: Date.now() });
@@ -43,6 +46,18 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = await req.json();
+
+    // Not an AI task: crop the head-and-shoulders out of a try-on result so
+    // makeup and jewelry work on a large, clear face.
+    if (body?.step === "portrait") {
+      if (!isAllowedResultUrl(body.srcUrl)) return NextResponse.json({ message: "Invalid image" }, { status: 400 });
+      const r = await fetch(body.srcUrl, { cache: "no-store" });
+      if (!r.ok) throw new YouCamError("Could not load the try-on result");
+      const buf = await headCrop(Buffer.from(await r.arrayBuffer()), "bust");
+      const fileId = await uploadImage(buf, "image/jpeg", "bust.jpg");
+      return NextResponse.json({ fileId });
+    }
+
     const step = body?.step as FeatureKey;
     if (!STEPS.includes(step)) return NextResponse.json({ message: "Unknown step" }, { status: 400 });
 
@@ -76,6 +91,14 @@ export async function POST(req: NextRequest) {
         version: "1.0",
       });
       return NextResponse.json({ taskId, plan });
+    }
+
+    if (step === "necklace") {
+      const necklace = getNecklace(String(body.necklaceId));
+      if (!necklace) return NextResponse.json({ message: "Unknown necklace" }, { status: 400 });
+      const refId = await catalogFileId(necklace.image);
+      const taskId = await createTask("necklace", { ...sourceFields(body), ref_file_ids: [refId] });
+      return NextResponse.json({ taskId });
     }
 
     // earring
