@@ -157,6 +157,7 @@ const Header = () => {
     { label: "Home", href: "/" },
     { label: "Shop", href: "/all-products" },
     ...collections.slice(0, 2),
+    { label: "Look Studio", href: "/look-studio" },
     { label: "AI Try-On", href: "/virtual-try-on" },
     { label: "Contact", href: "/contact" },
   ];

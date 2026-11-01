@@ -34,6 +34,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-toastify": "^11.0.3",
+    "server-only": "^0.0.1",
     "styled-components": "^6.1.14",
     "sweetalert2": "^11.26.18",
     "tailwind-merge": "^2.6.0",
