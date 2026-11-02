@@ -1,3 +1,25 @@
+# Mahila Look Studio
+Try on the complete look — outfit, makeup and jewelry — before you buy.
+Built for the YouCam API Skin AI & eCommerce VTO Hackathon.
+
+Live demo: https://<your-app>.vercel.app/look-studio
+Demo video: <YouTube link>
+
+## YouCam APIs used
+AI Clothes VTO (cloth-v4) · AI Facial Color Tones Analyzer · AI Makeup VTO · AI Earrings VTO · AI Necklace VTO
+
+## Run locally
+1. npm install
+2. Copy .env.example to .env.local and set YOUCAM_API_KEY and MONGODB_URI
+3. npm run dev → http://localhost:3000/look-studio
+
+## Key files
+- src/lib/lookstudio/harmony.ts — Color Harmony Engine
+- src/lib/lookstudio/youcam.ts — YouCam client (upload, task, poll)
+- src/app/api/look/ — server routes
+- src/components/lookstudio/LookStudio.tsx — UI
+
+
 # Mahila — E-Commerce Website with Next.js & MongoDB
 
 Mahila is an e-commerce platform built with Next.js and MongoDB for data storage. Users can browse products and add items to cart. (Stripe payments have been removed; the cart flow ends at the checkout step.)
